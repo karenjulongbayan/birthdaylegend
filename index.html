@@ -86,7 +86,7 @@ window.GAME = {
     reward:{icon:"🎁",name:"The Real Surprise",rarity:"Mythic",note:"Come find me — your real gift is waiting. 💛"},
     letter:"My love,\n\nHappy 30th birthday! You beat every world — but you've already won my heart a thousand times over. Thank you for every laugh, every late-night talk, and every little way you make ordinary days feel special.\n\nHere's to many more levels together. 🎂",
     finalTitle:"Happy Birthday!",
-    finalMessage:"Thanks for being awesome — and for being mine. Five worlds couldn't hold all the reasons I love you. GGs forever, my duo. 💛",
+    finalMessage:"Thanks for being awesome — and for being mine. Five worlds couldn't hold all the reasons I love you. GGs forever, my baby. 💛",
     signoff:"— forever your Player 2",
   },
   // ===== PHOTOS shown after clearing each world (rot = degrees to rotate, if a photo is sideways) =====
@@ -97,7 +97,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withcompletefam.jpg"} ],
     // World 2 — Racing the Boys (friends)
     [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriendsbeach.jpg"},
-      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendsinlaunion.jpg"},
+      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendsinlaunion.jpg",rot:-90},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendshangout.JPG"} ],
     // World 3 — Music Universe
     [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriends1975.jpg",rot:90},
@@ -105,7 +105,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/neckdeep.jpg"} ],
     // World 4 — Crypto Trader Dungeon
     [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejpose.jpg"},
-      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejoutfitcheck.jpg"},
+      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejoutfitcheck.jpg",rot:90},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/introvertej.jpg"} ],
     // World 5 — Final Boss (collage of many)
     [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithphone.jpg"},
@@ -120,6 +120,8 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_9471%204.jpg"} ],
   ],
   finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:90},
+  // Song played over the very last photo (after fireworks). track = index into musicTracks; start = seconds (any good part); dur 0 = play through.
+  finalSong:{track:1, start:0, dur:0},
   // ===== Music Universe songs (one per wave). start = seconds where the CHORUS begins; dur = seconds to play before looping back. Tweak start to land exactly on each chorus. =====
   musicTracks:[
     {title:"Feel Special",   url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/TWICE_-_Feel_Special_(mp3.pm)%20(1).mp3", start:58, dur:30},
@@ -550,7 +552,9 @@ function toggleMusic(){bgmOn=!bgmOn;if(bgmOn)bgmStart();else bgmStop();const b=$
 /* ---- Music Universe: real song clips, one per wave ---- */
 let worldAudio=null,audioUnlocked=false;
 function getWorldAudio(){if(!worldAudio&&typeof Audio!=="undefined"){worldAudio=new Audio();worldAudio.preload="auto";worldAudio.playsInline=true;worldAudio.setAttribute&&worldAudio.setAttribute("playsinline","");worldAudio._idx=-1;
-  worldAudio.ontimeupdate=()=>{const tr=G.musicTracks&&G.musicTracks[worldAudio._idx];if(tr&&tr.dur&&worldAudio.currentTime>(tr.start||0)+tr.dur)worldAudio.currentTime=tr.start||0;};}
+  worldAudio.ontimeupdate=()=>{const a=worldAudio,tr=G.musicTracks&&G.musicTracks[a._idx];if(!tr)return;
+    const st=(a._ov!=null?a._ov:(tr.start||0)),du=(a._durOv!=null?a._durOv:tr.dur);
+    if(du&&a.currentTime>st+du)a.currentTime=st;};}
   return worldAudio;}
 // iOS/Safari needs a real tap to authorize UNMUTED playback. Playing a tiny silent clip
 // inside a tap "blesses" the element so later programmatic play() works.
@@ -558,13 +562,14 @@ function unlockWorldAudio(){const a=getWorldAudio();if(!a||audioUnlocked)return;
   try{a.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
     const p=a.play();if(p&&p.then)p.then(()=>{try{a.pause();a.currentTime=0;}catch(e){}}).catch(()=>{});
   }catch(e){}}
-function playSong(i){const a=getWorldAudio();if(!a||!G.musicTracks||!G.musicTracks[i])return;
-  if(a._idx===i&&!a.paused)return;a._idx=i;const tr=G.musicTracks[i];a.muted=false;a.loop=false;
+function playSong(i,startOv,durOv){const a=getWorldAudio();if(!a||!G.musicTracks||!G.musicTracks[i])return;
+  if(a._idx===i&&a._ov===startOv&&!a.paused)return;a._idx=i;a._ov=startOv;a._durOv=durOv;const tr=G.musicTracks[i];a.muted=false;a.loop=false;
   a.src=tr.url;                                  // start from 0 so sound is guaranteed…
-  const jump=()=>{a.removeEventListener("playing",jump);const st=tr.start||0;if(st>0){try{a.currentTime=st;}catch(e){}}}; // …then hop to the chorus
+  const st=(startOv!=null?startOv:(tr.start||0));
+  const jump=()=>{a.removeEventListener("playing",jump);if(st>0){try{a.currentTime=st;}catch(e){}}}; // …then hop to the chosen part
   a.addEventListener("playing",jump);
   if(bgmOn){const p=a.play();if(p&&p.catch)p.catch(()=>{});}}
-function stopWorldMusic(){if(worldAudio){try{worldAudio.pause();}catch(e){}worldAudio._idx=-1;}}
+function stopWorldMusic(){if(worldAudio){try{worldAudio.pause();}catch(e){}worldAudio._idx=-1;worldAudio._ov=undefined;worldAudio._durOv=undefined;}}
 
 /* ---- shared state ---- */
 let state="title", worldIdx=0, world=null, eng=null, flagsGot=0, gold=0, t=0;
@@ -726,6 +731,7 @@ function renderPhotos(el,photos){
 function winWorld(){
   if(state!=="play")return;state="clear";cleared[worldIdx]=true;$("#hud").style.display="none";
   if(world&&world.genre==="shoot"){stopWorldMusic();if(bgmOn)bgmStart();}
+  if(worldIdx===G.worlds.length-1){bgmStop();stopBirthdayMusic();playSong((G.musicTracks&&G.musicTracks.length-1)||5);}  // Still Into You over the victory photos
   $("#clearTitle").innerHTML='<span class="victory-laurel">🏆</span> VICTORY <span class="victory-laurel">🏆</span>';$("#clearSub").textContent="All 6 objectives secured! ACE! 🎉";
   const gift=world.gift;$("#giftReveal").classList.remove("show");$("#giftBox").style.display="";
   $("#giftName").textContent=`${gift.icon} ${gift.name}`;$("#giftRar").textContent=gift.rarity.toUpperCase();
@@ -2078,7 +2084,7 @@ const _startLevel=startLevel;
 startLevel=function(i){_startLevel(i);if(eng&&eng.touch)eng.touch();buildAbilities(eng&&eng.abilities);};
 
 /* ===================== FINALE ===================== */
-function startFinale(){state="finale";bgmStop();
+function startFinale(){state="finale";bgmStop();stopWorldMusic();
   $("#princessBox").innerHTML='<div class="walkIn">'+princessSVG()+'</div>';
   const va=$("#voiceAudio"),pv=$("#playVoice");
   if(G.finale.voiceNoteUrl){va.src=G.finale.voiceNoteUrl;pv.textContent="▶ Play her message 🎤";pv.dataset.ok="1";}
@@ -2128,8 +2134,10 @@ $("#cutNext1").onclick=()=>{$("#cutBananitoBox").innerHTML=
   show("cut2");try{setTrack("boss");}catch(e){}beep(150,.2,"sawtooth");setTimeout(()=>beep(110,.24,"sawtooth"),170);setTimeout(()=>beep(90,.26,"sawtooth"),360);};
 $("#cutNext2").onclick=()=>{const f=cutEnd;cutEnd=null;if(f)f();};
 $("#playVoice").onclick=()=>{const va=$("#voiceAudio"),pv=$("#playVoice");if(!pv.dataset.ok)return;
-  try{va.currentTime=0;va.play();pv.textContent="♪ Playing…";va.onended=()=>{pv.textContent="▶ Play again 🎤";};}catch(e){}};
-$("#toReward").onclick=()=>{const va=$("#voiceAudio");try{va.pause();}catch(e){}
+  try{va.currentTime=0;va.play();pv.textContent="♪ Playing…";duckBday(.18);
+    va.onended=()=>{pv.textContent="▶ Play again 🎤";duckBday(1);};
+    va.onpause=()=>{duckBday(1);};}catch(e){duckBday(1);}};
+$("#toReward").onclick=()=>{const va=$("#voiceAudio");try{va.pause();}catch(e){}duckBday(1);
   const r=G.finale.reward||{icon:"🎁",name:"The Real Surprise",rarity:"Mythic",note:""};
   $("#rewardBox").textContent=r.icon;$("#rewardRarity").textContent="✦ "+(r.rarity||"")+" ✦";$("#rewardName").textContent=r.name;$("#rewardNote").textContent=r.note;
   show("finR");bigParty();beep(880,.1);setTimeout(()=>beep(1180,.12),120);};
@@ -2160,18 +2168,21 @@ function toFinalStep(){$("#finalTitle").textContent="THANK YOU FOR PLAYING";$("#
   $("#signoff").textContent=G.finale.signoff;show("fin4");bigParty();}
 $("#toLove").onclick=()=>{$("#loveName").textContent=G.name+" — happy 30th 🎂";
   if(G.finalPhoto)$("#finalPhoto").innerHTML='<div style="display:flex;justify-content:center;margin:12px 0 4px">'+photoHTML(G.finalPhoto,"min(220px,70%)",true)+'</div>';
+  stopBirthdayMusic();const fs=G.finalSong;if(fs)playSong(fs.track,fs.start,fs.dur);   // Motion Sickness over the last photo
   show("fin5");bigParty();setTimeout(bigParty,500);setTimeout(bigParty,1100);setTimeout(bigParty,1700);};
 $("#replayBtn").onclick=()=>openMap();
-let bdayLoop=null,bdayOsc=[];
-function birthdayTune(){if(muted)return;const a=ac();if(!a)return;
+let bdayLoop=null,bdayOsc=[],bdayGain=null;
+function getBdayGain(){const a=ac();if(a&&!bdayGain){bdayGain=a.createGain();bdayGain.gain.value=1;bdayGain.connect(a.destination);}return bdayGain;}
+function duckBday(v){const a=ac();const g=getBdayGain();if(a&&g){try{g.gain.cancelScheduledValues(a.currentTime);g.gain.linearRampToValueAtTime(v,a.currentTime+.3);}catch(e){}}}
+function birthdayTune(){if(muted)return;const a=ac();if(!a)return;const out=getBdayGain()||a.destination;
   const N={G3:196,A3:220,Bb3:233,C4:262,D4:294,E4:330,F4:349,G4:392};
   const seq=[["G3",.5],["G3",.5],["A3",1],["G3",1],["C4",1],["Bb3",2],["G3",.5],["G3",.5],["A3",1],["G3",1],["D4",1],["C4",2],
     ["G3",.5],["G3",.5],["G4",1],["E4",1],["C4",1],["Bb3",1],["A3",2],["F4",.5],["F4",.5],["E4",1],["C4",1],["D4",1],["C4",2]];
   let tt=a.currentTime+.1,beat=60/140;
   for(const[n,b]of seq){const o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=N[n]*2;
     g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.045,tt+.02);g.gain.exponentialRampToValueAtTime(.0001,tt+b*beat*.95);
-    o.connect(g);g.connect(a.destination);o.start(tt);o.stop(tt+b*beat);tt+=b*beat;bdayOsc.push(o);}}
-function startBirthdayMusic(){stopBirthdayMusic();if(muted)return;birthdayTune();bdayLoop=setInterval(()=>{if(!muted)birthdayTune();},10400);}
+    o.connect(g);g.connect(out);o.start(tt);o.stop(tt+b*beat);tt+=b*beat;bdayOsc.push(o);}}
+function startBirthdayMusic(){stopBirthdayMusic();if(muted)return;duckBday(1);birthdayTune();bdayLoop=setInterval(()=>{if(!muted)birthdayTune();},10400);}
 function stopBirthdayMusic(){if(bdayLoop){clearInterval(bdayLoop);bdayLoop=null;}for(const o of bdayOsc){try{o.stop();}catch(e){}}bdayOsc=[];}
 
 /* ===================== MAIN LOOP ===================== */
