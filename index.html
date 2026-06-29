@@ -82,7 +82,7 @@ window.GAME = {
   finale:{
     montage:[ /* "https://photo-a.jpg","https://photo-b.jpg" */ ],
     videoEmbedUrl:"", videoFileUrl:"",
-    voiceNoteUrl:"",   /* ← paste your uploaded voice-note URL here (mp3 / m4a / wav) */
+    voiceNoteUrl:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/Bday%20note.mp3",
     reward:{icon:"🎁",name:"The Real Surprise",rarity:"Mythic",note:"Come find me — your real gift is waiting. 💛"},
     letter:"My love,\n\nHappy 30th birthday! You beat every world — but you've already won my heart a thousand times over. Thank you for every laugh, every late-night talk, and every little way you make ordinary days feel special.\n\nHere's to many more levels together. 🎂",
     finalTitle:"Happy Birthday!",
@@ -100,7 +100,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendsinlaunion.jpg"},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendshangout.JPG"} ],
     // World 3 — Music Universe
-    [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriends1975.jpg"},
+    [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriends1975.jpg",rot:90},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withblinkshirtconcert.jpg"},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/neckdeep.jpg"} ],
     // World 4 — Crypto Trader Dungeon
@@ -808,7 +808,7 @@ addEventListener("pointerdown",unlockWorldAudio);
 addEventListener("touchstart",unlockWorldAudio);
 $("#quit").onclick=()=>openMap();
 function openMap(){
-  state="map";$("#hud").style.display="none";$("#touch").classList.remove("on");stopWorldMusic();setTrack("theme");if(bgmOn&&!bgmTimer)bgmStart();
+  state="map";$("#hud").style.display="none";$("#touch").classList.remove("on");stopWorldMusic();stopBirthdayMusic();setTrack("theme");if(bgmOn&&!bgmTimer)bgmStart();
   const list=$("#worldList");list.innerHTML="";
   G.worlds.forEach((wd,i)=>{const un=G.unlockAll||i===0||cleared[i-1];
     const node=document.createElement("div");
@@ -2083,7 +2083,7 @@ function startFinale(){state="finale";bgmStop();
   const va=$("#voiceAudio"),pv=$("#playVoice");
   if(G.finale.voiceNoteUrl){va.src=G.finale.voiceNoteUrl;pv.textContent="▶ Play her message 🎤";pv.dataset.ok="1";}
   else{pv.textContent="🎤 (voice note coming soon)";pv.dataset.ok="";}
-  show("finP");birthdayTune();bigParty();}
+  show("finP");startBirthdayMusic();bigParty();}
 function princessSVG(){return `<svg viewBox="0 0 220 220" width="200" height="200" style="max-width:72%">
   <ellipse cx="110" cy="210" rx="70" ry="9" fill="rgba(0,0,0,.25)"/>
   <path d="M110 96 L150 200 L70 200 Z" fill="#ff7fb0"/><path d="M110 96 L132 200 L88 200 Z" fill="#ff9ec6"/>
@@ -2162,14 +2162,17 @@ $("#toLove").onclick=()=>{$("#loveName").textContent=G.name+" — happy 30th �
   if(G.finalPhoto)$("#finalPhoto").innerHTML='<div style="display:flex;justify-content:center;margin:12px 0 4px">'+photoHTML(G.finalPhoto,"min(220px,70%)",true)+'</div>';
   show("fin5");bigParty();setTimeout(bigParty,500);setTimeout(bigParty,1100);setTimeout(bigParty,1700);};
 $("#replayBtn").onclick=()=>openMap();
+let bdayLoop=null,bdayOsc=[];
 function birthdayTune(){if(muted)return;const a=ac();if(!a)return;
   const N={G3:196,A3:220,Bb3:233,C4:262,D4:294,E4:330,F4:349,G4:392};
   const seq=[["G3",.5],["G3",.5],["A3",1],["G3",1],["C4",1],["Bb3",2],["G3",.5],["G3",.5],["A3",1],["G3",1],["D4",1],["C4",2],
     ["G3",.5],["G3",.5],["G4",1],["E4",1],["C4",1],["Bb3",1],["A3",2],["F4",.5],["F4",.5],["E4",1],["C4",1],["D4",1],["C4",2]];
   let tt=a.currentTime+.1,beat=60/140;
   for(const[n,b]of seq){const o=a.createOscillator(),g=a.createGain();o.type="square";o.frequency.value=N[n]*2;
-    g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.07,tt+.02);g.gain.exponentialRampToValueAtTime(.0001,tt+b*beat*.95);
-    o.connect(g);g.connect(a.destination);o.start(tt);o.stop(tt+b*beat);tt+=b*beat;}}
+    g.gain.setValueAtTime(.0001,tt);g.gain.exponentialRampToValueAtTime(.045,tt+.02);g.gain.exponentialRampToValueAtTime(.0001,tt+b*beat*.95);
+    o.connect(g);g.connect(a.destination);o.start(tt);o.stop(tt+b*beat);tt+=b*beat;bdayOsc.push(o);}}
+function startBirthdayMusic(){stopBirthdayMusic();if(muted)return;birthdayTune();bdayLoop=setInterval(()=>{if(!muted)birthdayTune();},10400);}
+function stopBirthdayMusic(){if(bdayLoop){clearInterval(bdayLoop);bdayLoop=null;}for(const o of bdayOsc){try{o.stop();}catch(e){}}bdayOsc=[];}
 
 /* ===================== MAIN LOOP ===================== */
 function frame(){t++;x.clearRect(0,0,W,H);
