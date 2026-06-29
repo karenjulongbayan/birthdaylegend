@@ -127,6 +127,7 @@ window.GAME = {
     {title:"Daylily",        url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/Movements-Daylily-mp3pm.mp3", start:64, dur:30},
     {title:"Roam",           url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/Roam%20(1).mp3", start:44, dur:30},
     {title:"Happiness",      url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/The%201975%20-%20Happiness%20(Lyrics)%20(2).mp3", start:60, dur:30},
+    {title:"Still Into You",  url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/Paramore%20-%20Still%20into%20You%20Lyrics%20(1).mp3", start:50, dur:34}, // DJ boss wave
   ],
   // Face framing for the character head. zoom: lower = tighter on the face. cx/cy: focus point (0–1) — lower cy = higher up (more forehead/hair), raise cy to move down toward chin.
   faceCrop:{zoom:0.60, cx:0.5, cy:0.32},
@@ -578,14 +579,14 @@ addEventListener("keydown",e=>{if(state!=="play")return;
   if(k==="arrowright"||k==="d")key.r=true;
   if(k===" "||k==="z"){if(!key.a)key._aEdge=true;key.a=true;e.preventDefault();}
   if(k==="arrowup"||k==="w"||k==="i"){if(!key.up)key._upEdge=true;key.up=true;e.preventDefault();}
-  if(k==="x"||k==="k")key.b=true;
+  if(k==="x"||k==="k"||k==="j"||k==="f")key.b=true;
   if(k==="c"||k==="l"||k==="shift")key.block=true;});
 addEventListener("keyup",e=>{const k=e.key.toLowerCase();
   if(k==="arrowleft"||k==="a")key.l=false;
   if(k==="arrowright"||k==="d")key.r=false;
   if(k===" "||k==="z")key.a=false;
   if(k==="arrowup"||k==="w"||k==="i")key.up=false;
-  if(k==="x"||k==="k")key.b=false;
+  if(k==="x"||k==="k"||k==="j"||k==="f")key.b=false;
   if(k==="c"||k==="l"||k==="shift")key.block=false;});
 
 /* Enter key = press the current screen's main button (no mouse needed) */
@@ -886,9 +887,9 @@ function champ(px,py,w,h,col,face,frame){ // simple champion sprite
 /* =================== DUNGEON GAUNTLET (platforming + shooting + traps) =================== */
 ENGINES.dungeon=(function(){
   const GROUND=520,GR=.9,MV=.95,MX=6.2,FR=.78,JP=16.6,BSPD=9.2;
-  let pl,cam,plats,keys,foes,traps,shots,door,len,th,diff,shootCd,egg,doorPulse,sols;
+  let pl,cam,plats,keys,foes,traps,shots,door,len,th,diff,shootCd,egg,doorPulse,sols,hintT;
   function init(wd,d){
-    diff=d;th=wd.theme;len=5200+d*110;shootCd=0;shots=[];doorPulse=0;
+    diff=d;th=wd.theme;len=5200+d*110;shootCd=0;shots=[];doorPulse=0;hintT=420;
     pl={x:120,y:GROUND-60,w:30,h:54,vx:0,vy:0,g:false,f:1,rt:0};
     cam=0;plats=[{x:0,y:GROUND,w:len+320,h:400}];
     const P_=[
@@ -926,13 +927,13 @@ ENGINES.dungeon=(function(){
   function guardDead(g){if(g<0)return true;const b=foes.find(f=>f.kind==="boss"&&f.guard===g);return !b||!b.alive;}
   function shoot(){if(shootCd>0)return;shootCd=13;shots.push({x:pl.x+pl.w/2+pl.f*20,y:pl.y+pl.h*.42,vx:pl.f*BSPD,l:1});beep(680,.04,"square");}
   function update(){
-    if(shootCd>0)shootCd--;if(doorPulse>0)doorPulse--;
+    if(shootCd>0)shootCd--;if(doorPulse>0)doorPulse--;if(hintT>0)hintT--;
     if(key.l){pl.vx-=MV;pl.f=-1;}if(key.r){pl.vx+=MV;pl.f=1;}
     if(!key.l&&!key.r)pl.vx*=FR;pl.vx=clamp(pl.vx,-MX,MX);pl.x+=pl.vx;
     for(const p of plats)if(p.block&&aabb(pl.x,pl.y,pl.w,pl.h,p.x,p.y,p.w,p.h)){if(pl.vx>0)pl.x=p.x-pl.w;else if(pl.vx<0)pl.x=p.x+p.w;pl.vx=0;}
     pl.x=clamp(pl.x,0,len+200-pl.w);
     if((consumeA()||consumeUp())&&pl.g){pl.vy=-JP;pl.g=false;beep(560,.05);}
-    if(key.b)shoot();
+    if(key.b||key.a)shoot();
     pl.vy+=GR;pl.y+=pl.vy;pl.g=false;
     if(pl.y+pl.h>GROUND){pl.y=GROUND-pl.h;pl.vy=0;pl.g=true;}
     for(const p of plats)if(p.block&&aabb(pl.x,pl.y,pl.w,pl.h,p.x,p.y,p.w,p.h)){
@@ -1135,6 +1136,9 @@ ENGINES.dungeon=(function(){
     // HUD
     x.fillStyle="#fff";x.font=`${Math.round(10*s)}px "Press Start 2P"`;x.textAlign="center";x.fillText("🔑 KEYS "+flagsGot+"/6",W/2,28*s);
     x.fillStyle="rgba(255,255,255,.45)";x.font=`${Math.round(7*s)}px "Press Start 2P"`;x.fillText(th==="crypto"?"BUY LOW · SELL HIGH · TO THE MOON":"ONLY THE STRONGEST REACH THE ARENA",W/2,42*s);
+    if(hintT>0){const a=Math.min(1,hintT/60);x.globalAlpha=a;x.fillStyle="rgba(10,8,18,.7)";x.fillRect(W/2-150*s,H-58*s,300*s,32*s);
+      x.fillStyle="#7ee06a";x.font=`${Math.round(8*s)}px "Press Start 2P"`;x.textAlign="center";x.fillText("SPACE / X = SHOOT",W/2,H-42*s);
+      x.fillStyle="rgba(255,255,255,.7)";x.font=`${Math.round(6.5*s)}px "Press Start 2P"`;x.fillText("blast the beasts to free each key",W/2,H-30*s);x.globalAlpha=1;}
   }
   return {init,update,draw,goalReached,
     abilities:[{k:"Q",n:"JUMP",in:"up"},{k:"W",n:"SHOOT",in:"b"},{k:"E",n:"MOVE",in:"lr"},{k:"R",n:"KEYS",in:"—"}],
