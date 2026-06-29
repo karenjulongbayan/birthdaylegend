@@ -128,6 +128,8 @@ window.GAME = {
     {title:"Roam",           url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/Roam%20(1).mp3", start:44, dur:30},
     {title:"Happiness",      url:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/The%201975%20-%20Happiness%20(Lyrics)%20(2).mp3", start:60, dur:30},
   ],
+  // Face framing for the character head. zoom: lower = tighter on the face. cx/cy: focus point (0–1) — lower cy = higher up (more forehead/hair), raise cy to move down toward chin.
+  faceCrop:{zoom:0.60, cx:0.5, cy:0.32},
 };
 </script>
 
@@ -549,19 +551,18 @@ let worldAudio=null,audioUnlocked=false;
 function getWorldAudio(){if(!worldAudio&&typeof Audio!=="undefined"){worldAudio=new Audio();worldAudio.preload="auto";worldAudio.playsInline=true;worldAudio.setAttribute&&worldAudio.setAttribute("playsinline","");worldAudio._idx=-1;
   worldAudio.ontimeupdate=()=>{const tr=G.musicTracks&&G.musicTracks[worldAudio._idx];if(tr&&tr.dur&&worldAudio.currentTime>(tr.start||0)+tr.dur)worldAudio.currentTime=tr.start||0;};}
   return worldAudio;}
-// iOS/Safari requires a real tap to "bless" the <audio> element before code can play it.
+// iOS/Safari needs a real tap to authorize UNMUTED playback. Playing a tiny silent clip
+// inside a tap "blesses" the element so later programmatic play() works.
 function unlockWorldAudio(){const a=getWorldAudio();if(!a||audioUnlocked)return;audioUnlocked=true;
-  try{a.muted=true;a.src=(G.musicTracks&&G.musicTracks[0]&&G.musicTracks[0].url)||"";
-    const p=a.play();if(p&&p.then)p.then(()=>{try{a.pause();a.currentTime=0;}catch(e){}a.muted=false;}).catch(()=>{a.muted=false;});
-    else{try{a.pause();}catch(e){}a.muted=false;}
-  }catch(e){a.muted=false;}}
+  try{a.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+    const p=a.play();if(p&&p.then)p.then(()=>{try{a.pause();a.currentTime=0;}catch(e){}}).catch(()=>{});
+  }catch(e){}}
 function playSong(i){const a=getWorldAudio();if(!a||!G.musicTracks||!G.musicTracks[i])return;
   if(a._idx===i&&!a.paused)return;a._idx=i;const tr=G.musicTracks[i];a.muted=false;a.loop=false;
-  if(a.src!==tr.url){a.src=tr.url;a.load&&a.load();}
-  const seek=()=>{const st=tr.start||0;try{if(st>0&&(!a.duration||st<a.duration))a.currentTime=st;}catch(e){}};
-  a.onloadedmetadata=seek;
-  a.oncanplay=()=>{seek();if(bgmOn){const q=a.play();if(q&&q.catch)q.catch(()=>{});}};
-  if(bgmOn){const p=a.play();if(p&&p.then)p.then(seek).catch(()=>{});}}
+  a.src=tr.url;                                  // start from 0 so sound is guaranteed…
+  const jump=()=>{a.removeEventListener("playing",jump);const st=tr.start||0;if(st>0){try{a.currentTime=st;}catch(e){}}}; // …then hop to the chorus
+  a.addEventListener("playing",jump);
+  if(bgmOn){const p=a.play();if(p&&p.catch)p.catch(()=>{});}}
 function stopWorldMusic(){if(worldAudio){try{worldAudio.pause();}catch(e){}worldAudio._idx=-1;}}
 
 /* ---- shared state ---- */
@@ -860,7 +861,11 @@ let ejFaceOk=false;const EJFACE=(typeof Image!=="undefined")?new Image():null;
 if(EJFACE){EJFACE.onload=()=>{ejFaceOk=true;};EJFACE.onerror=()=>{ejFaceOk=false;};
   EJFACE.src="https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/cuteejchildhood.jpg";}
 function faceImg(cx,cy,r){if(!ejFaceOk||!EJFACE)return;
-  const iw=EJFACE.naturalWidth||1,ih=EJFACE.naturalHeight||1,side=Math.min(iw,ih),ox=(iw-side)/2,oy=(ih-side)/2;
+  const iw=EJFACE.naturalWidth||1,ih=EJFACE.naturalHeight||1;
+  const fc=G.faceCrop||{zoom:0.62,cx:0.5,cy:0.32};
+  const side=Math.min(iw,ih)*(fc.zoom||0.62);
+  let ox=iw*(fc.cx!=null?fc.cx:0.5)-side/2, oy=ih*(fc.cy!=null?fc.cy:0.32)-side/2;
+  ox=Math.max(0,Math.min(ox,iw-side));oy=Math.max(0,Math.min(oy,ih-side));
   x.save();x.beginPath();x.arc(cx,cy,r,0,7);x.closePath();x.clip();x.drawImage(EJFACE,ox,oy,side,side,cx-r,cy-r,r*2,r*2);x.restore();
   x.lineWidth=Math.max(1,r*.14);x.strokeStyle="rgba(20,10,30,.4)";x.beginPath();x.arc(cx,cy,r,0,7);x.stroke();}
 function champ(px,py,w,h,col,face,frame){ // simple champion sprite
