@@ -655,18 +655,21 @@ function spark(px,py,hue,n){n=reduce?Math.min(n,8):n;for(let i=0;i<n;i++){const 
   parts.push({x:px,y:py,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1,hue});}startFx();}
 function burst(){spark(rnd(W*.2,W*.8),rnd(H*.15,H*.5),rnd(0,360),30);beep(660,.05,"triangle");}
 function confettiBurst(){const cols=["#ffcf3f","#ff6b9d","#28d8c4","#3fd0e6","#b98cff","#fff"];const n=reduce?40:110;
-  for(let i=0;i<n;i++)conf.push({x:rnd(0,W),y:rnd(-H,0),vy:rnd(1,3.4),vx:rnd(-.7,.7),s:rnd(4,9),rot:rnd(0,6),vr:rnd(-.15,.15),c:cols[i%cols.length]});startFx();}
+  for(let i=0;i<n;i++)conf.push({x:rnd(0,W),y:rnd(-H,0),vy:rnd(1,3.4),vx:rnd(-.7,.7),s:rnd(4,9),rot:rnd(0,6),vr:rnd(-.15,.15),c:cols[i%cols.length]});
+  if(conf.length>360)conf.splice(0,conf.length-360);startFx();}
 function bigParty(){for(let k=0;k<3;k++)setTimeout(burst,k*420);confettiBurst();}
 function startFx(){if(!fxOn){fxOn=true;requestAnimationFrame(fxLoop);}}
 function fxLoop(){fxx.clearRect(0,0,W,H);
   for(const p of parts){p.vy+=.06;p.x+=p.vx;p.y+=p.vy;p.l-=.012;
     if(p.l>0){fxx.globalAlpha=Math.max(0,p.l);fxx.fillStyle=`hsl(${p.hue},90%,65%)`;fxx.fillRect(p.x,p.y,3,3);}}
   parts=parts.filter(p=>p.l>0);
-  for(const cc of conf){cc.x+=cc.vx;cc.y+=cc.vy;cc.rot+=cc.vr;if(cc.y>H+20)cc.y=-20;
+  for(const cc of conf){cc.x+=cc.vx;cc.y+=cc.vy;cc.rot+=cc.vr;
     fxx.save();fxx.globalAlpha=1;fxx.translate(cc.x,cc.y);fxx.rotate(cc.rot);fxx.fillStyle=cc.c;
     fxx.fillRect(-cc.s/2,-cc.s/2,cc.s,cc.s*.6);fxx.restore();}
   fxx.globalAlpha=1;
   if(state==="play"||state==="map"||state==="title")conf=[];
+  else conf=conf.filter(cc=>cc.y<H+30);                       // confetti falls once, then is removed (no infinite pile-up)
+  if(parts.length===0&&conf.length===0){fxOn=false;return;}   // stop the loop when there's nothing to animate
   requestAnimationFrame(fxLoop);}
 
 /* ---- callouts / tips ---- */
@@ -1051,11 +1054,13 @@ ENGINES.dungeon=(function(){
      for(let i=-1;i*sp-off<W+sp;i++){const ax=i*sp-off,ay=horizon-40*s;
        x.fillStyle="rgba(40,24,52,.6)";x.fillRect(ax,ay-150*s,46*s,150*s);
        x.beginPath();x.arc(ax+23*s,ay-150*s,23*s,Math.PI,0);x.fill();}}
-    // back wall bricks
+    // back wall bricks (batched into a single path — far cheaper than per-brick strokeRect)
     {const par=.7,bw=58*s,bh=30*s,off=((cam*par)%bw+bw)%bw;
-     for(let r=0;r*bh<horizon;r++){const yy=horizon-40*s-r*bh;
-       for(let i=-1;i*bw-off<W+bw;i++){const xx=i*bw-off+((r%2)?bw/2:0);
-         x.strokeStyle="rgba(70,48,86,.35)";x.lineWidth=1;x.strokeRect(xx,yy,bw,bh);}}}
+     x.strokeStyle="rgba(70,48,86,.35)";x.lineWidth=1;x.beginPath();
+     for(let r=0;r*bh<horizon;r++){const yy=horizon-40*s-r*bh;x.moveTo(0,yy);x.lineTo(W,yy);
+       const rowOff=((r%2)?bw/2:0)-off;
+       for(let i=-1;i*bw+rowOff<W+bw;i++){const xx=i*bw+rowOff;x.moveTo(xx,yy);x.lineTo(xx,yy+bh);}}
+     x.stroke();}
     // Solana NFT gallery — framed portraits hung on the wall (crypto dungeon)
     if(th==="crypto"){const par=.7,sp=520,off=((cam*par)%sp+sp)%sp,fr=58*s,r=fr/2;
       const kinds=["okay","cets","degods","smb","madlads","clayno","trippin"],
@@ -2275,6 +2280,7 @@ let bdayLoop=null,bdayOsc=[],bdayGain=null;
 function getBdayGain(){const a=ac();if(a&&!bdayGain){bdayGain=a.createGain();bdayGain.gain.value=1;bdayGain.connect(a.destination);}return bdayGain;}
 function duckBday(v){const a=ac();const g=getBdayGain();if(a&&g){try{g.gain.cancelScheduledValues(a.currentTime);g.gain.linearRampToValueAtTime(v,a.currentTime+.3);}catch(e){}}}
 function birthdayTune(){if(muted)return;const a=ac();if(!a)return;const out=getBdayGain()||a.destination;
+  bdayOsc=[];   // only retain the current batch; previous notes have already finished
   const N={G3:196,A3:220,Bb3:233,C4:262,D4:294,E4:330,F4:349,G4:392};
   const seq=[["G3",.5],["G3",.5],["A3",1],["G3",1],["C4",1],["Bb3",2],["G3",.5],["G3",.5],["A3",1],["G3",1],["D4",1],["C4",2],
     ["G3",.5],["G3",.5],["G4",1],["E4",1],["C4",1],["Bb3",1],["A3",2],["F4",.5],["F4",.5],["E4",1],["C4",1],["D4",1],["C4",2]];
@@ -2287,7 +2293,7 @@ function stopBirthdayMusic(){if(bdayLoop){clearInterval(bdayLoop);bdayLoop=null;
 
 /* ===================== MAIN LOOP ===================== */
 function frame(){t++;x.clearRect(0,0,W,H);
-  if(eng&&(state==="play"||state==="flag"||state==="clear"||state==="defeat"||state==="finale")){
+  if(eng&&(state==="play"||state==="flag"||state==="clear"||state==="defeat")){
     eng.draw();if(state==="play")eng.update();
   }else{ bg(["#08142e","#102a52"]); }
   const ab=$("#abilities");if(state==="play"){ab.style.display="flex";updateAbilities();}else ab.style.display="none";
