@@ -122,7 +122,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_8345%204.jpg"},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_9471%204.jpg"} ],
   ],
-  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:-270},
+  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion%20(1).jpg",rot:0},
   // Song played over the very last photo (after fireworks). track = index into musicTracks; start = seconds (any good part); dur 0 = play through.
   finalSong:{track:1, start:0, dur:0},
   // ===== Music Universe songs (one per wave). start = seconds where the CHORUS begins; dur = seconds to play before looping back. Tweak start to land exactly on each chorus. =====
@@ -147,11 +147,11 @@ html,body{margin:0;height:100%;background:#050a16;overflow:hidden;color:var(--cr
 #wrap{position:fixed;inset:0}
 canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
 .pixel{font-family:"Press Start 2P",monospace}
-.layer{position:absolute;inset:0;display:none;place-items:center;text-align:center;z-index:20;padding:22px;
+.layer{position:absolute;inset:0;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;text-align:center;z-index:20;padding:22px;
   background:radial-gradient(120% 100% at 50% 0%,rgba(10,80,110,.45),rgba(5,10,22,.95))}
-.layer.show{display:grid;animation:f .35s ease both}
+.layer.show{display:flex;animation:f .35s ease both}
 @keyframes f{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.card{width:min(560px,94vw)}
+.card{width:min(560px,94vw);margin:auto}
 .btn{font-family:"Press Start 2P";font-size:13px;border:none;cursor:pointer;color:#062a2a;
   background:linear-gradient(180deg,#28d8c4,var(--teal));padding:15px 22px;border-radius:14px;
   box-shadow:0 6px 0 #06756c,0 10px 16px rgba(0,0,0,.4);transition:transform .08s,box-shadow .08s}
@@ -210,11 +210,11 @@ h1.big{font-family:"Press Start 2P";font-size:clamp(17px,5.2vw,28px);color:var(-
 .statbar .fill{height:100%;background:linear-gradient(90deg,#ff9e2c,#ffcf3f);width:0;transition:width .9s ease}
 .lovebig{font-family:"Press Start 2P";font-size:24px;line-height:1.6;color:var(--rose);text-shadow:0 0 18px rgba(255,107,157,.6);margin:12px 0}
 #musicBtn{position:fixed;top:10px;left:10px;z-index:60;width:38px;height:38px;border:none;border-radius:50%;
-  background:rgba(20,16,34,.6);color:#fff;font-size:17px;cursor:pointer;backdrop-filter:blur(4px);
+  background:rgba(20,16,34,.6);color:#fff;font-size:17px;cursor:pointer;
   box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .15s,background .2s}
 #musicBtn:hover{transform:scale(1.08);background:rgba(40,30,60,.75)}
 #pauseBtn{position:fixed;top:10px;left:54px;z-index:60;width:38px;height:38px;border:none;border-radius:50%;
-  background:rgba(20,16,34,.6);color:#fff;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);
+  background:rgba(20,16,34,.6);color:#fff;font-size:16px;cursor:pointer;
   box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .15s,background .2s}
 #pauseBtn:hover{transform:scale(1.08);background:rgba(40,30,60,.75)}
 .civic{width:200px;max-width:74%;margin:6px auto 2px;display:block}
@@ -476,7 +476,6 @@ h1.big{color:var(--cgold);text-shadow:0 0 18px rgba(200,170,110,.5),0 3px 0 var(
     <button class="btn gold" id="toCozy">Continue ▶</button>
   </div></div>
   <div class="layer" id="fin1"><div class="card">
-    <div class="tagsmall">★ A COZY ROOM APPEARS ★</div>
     <div class="room"><div class="lamp"></div>
       <div id="cakeBox" style="margin:2px 0"></div>
     </div>
@@ -1828,7 +1827,7 @@ ENGINES.shoot=(function(){
     // drops
     for(const d2 of drops){d2.y+=d2.vy;if(Math.abs(d2.x-ship.x)<26&&Math.abs(d2.y-sy)<26){d2.got=true;
       if(d2.type==="egg"){findEgg("Duo-queue partner for life 🎮❤️");}
-      else if(d2.type==="ticket"){power=2;powerT=420;const ff=(world.funFacts&&world.funFacts.length)?world.funFacts[ticketIx%world.funFacts.length]:"🎫 Concert tix reseller!";ticketIx++;funFact(ff);}
+      else if(d2.type==="ticket"){power=2;powerT=420;const ff=(world.funFacts&&world.funFacts[ticketIx])||null;ticketIx++;if(ff)funFact(ff);}
       else if(d2.type==="shield"){P.hp=Math.min(P.maxHp,P.hp+1);callout("SHIELD UP!");}
       else{power=d2.type==="rapid"?1:2;powerT=420;callout(d2.type==="rapid"?"RAPID FIRE!":"SPREAD SHOT!");}
       updHud();beep(1100,.06);}}
@@ -2060,7 +2059,7 @@ ENGINES.race=(function(){
         else{gold+=20;callout("+20 GOLD!");beep(1300,.06);}}
       updHud();spark(W/2+it.x,it.y,52,12);}}
     for(const sh of shoes){sh.y+=dy;if(!sh.got&&Math.abs(sh.y-pys)<28&&Math.abs((W/2+sh.x)-pxs)<34){
-      sh.got=true;boostT=Math.max(boostT,80);const ff=(world.funFacts&&world.funFacts.length)?world.funFacts[shoeIx%world.funFacts.length]:"👟 Sneaker reseller!";shoeIx++;funFact(ff);spark(W/2+sh.x,sh.y,60,12);}}
+      sh.got=true;boostT=Math.max(boostT,80);const ff=(world.funFacts&&world.funFacts[shoeIx])||null;shoeIx++;if(ff)funFact(ff);spark(W/2+sh.x,sh.y,60,12);}}
     for(const g of gates){g.y+=dy;if(!g.passed&&g.y>pys){g.passed=true;lapDist=0;const fr=world.friends&&world.friends[g.idx];callout(fr?"🏁 PASSED "+fr.toUpperCase()+"!":"🏆 SQUAD CHAMP!");gotFlag(world.things[g.idx]);}}
     obs=obs.filter(o=>o.y<H+60);boosts=boosts.filter(b=>!b.got&&b.y<H+60);coins=coins.filter(c=>!c.got&&c.y<H+60);items=items.filter(it=>!it.got&&it.y<H+60);shoes=shoes.filter(sh=>!sh.got&&sh.y<H+60);gates=gates.filter(g=>g.y<H+60);
     if(P.inv>0)P.inv--;}
