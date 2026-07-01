@@ -122,7 +122,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_8345%204.jpg"},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_9471%204.jpg"} ],
   ],
-  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:180},
+  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:90},
   // Song played over the very last photo (after fireworks). track = index into musicTracks; start = seconds (any good part); dur 0 = play through.
   finalSong:{track:1, start:0, dur:0},
   // ===== Music Universe songs (one per wave). start = seconds where the CHORUS begins; dur = seconds to play before looping back. Tweak start to land exactly on each chorus. =====
@@ -213,6 +213,10 @@ h1.big{font-family:"Press Start 2P";font-size:clamp(17px,5.2vw,28px);color:var(-
   background:rgba(20,16,34,.6);color:#fff;font-size:17px;cursor:pointer;backdrop-filter:blur(4px);
   box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .15s,background .2s}
 #musicBtn:hover{transform:scale(1.08);background:rgba(40,30,60,.75)}
+#pauseBtn{position:fixed;top:10px;left:54px;z-index:60;width:38px;height:38px;border:none;border-radius:50%;
+  background:rgba(20,16,34,.6);color:#fff;font-size:16px;cursor:pointer;backdrop-filter:blur(4px);
+  box-shadow:0 2px 10px rgba(0,0,0,.4);transition:transform .15s,background .2s}
+#pauseBtn:hover{transform:scale(1.08);background:rgba(40,30,60,.75)}
 .civic{width:200px;max-width:74%;margin:6px auto 2px;display:block}
 #story{align-items:center;justify-content:center}
 .storyveil{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 30%,#1a1030 0,#08060f 75%);}
@@ -312,6 +316,15 @@ h1.big{color:var(--cgold);text-shadow:0 0 18px rgba(200,170,110,.5),0 3px 0 var(
   <canvas id="c"></canvas>
   <canvas id="fx"></canvas>
   <button id="musicBtn" onclick="toggleMusic()" aria-label="toggle music">🎵</button>
+  <button id="pauseBtn" onclick="togglePause()" aria-label="pause" style="display:none">⏸</button>
+  <div id="pauseScreen" class="layer" style="z-index:70"><div class="card">
+    <div class="tagsmall">⏸ PAUSED</div>
+    <div class="bigicon">🎮</div>
+    <div class="thingtitle">Take a breather</div>
+    <p class="sub">Your progress is safe — jump back in when you're ready.</p>
+    <button class="btn gold" onclick="togglePause()">▶ Resume</button>
+    <button class="btn" onclick="pauseToMap()" style="margin-top:8px">🗺️ Back to Map</button>
+  </div></div>
 
   <div id="hud" style="display:none">
     <span class="pill" id="hudWorld">W1</span>
@@ -550,6 +563,10 @@ function bgmTick(){if(muted||!bgmOn)return;const tr=TRACKS[bgmTrack]||TRACKS.the
   bgmNote(tr.mel[i],.19,tr.vol,tr.wav);if(tr.bass[i])bgmNote(tr.bass[i],.24,tr.vol*1.4,"triangle");bgmStep++;}
 function bgmStop(){if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;}}
 function bgmStart(){if(!bgmOn)return;bgmStop();bgmTimer=setInterval(bgmTick,TRACKS[bgmTrack].ms);}
+function togglePause(){if(!paused&&state!=="play")return;paused=!paused;
+  $("#pauseScreen").classList.toggle("show",paused);
+  const pb=$("#pauseBtn");if(pb)pb.textContent=paused?"▶":"⏸";}
+function pauseToMap(){paused=false;$("#pauseScreen").classList.remove("show");const pb=$("#pauseBtn");if(pb)pb.textContent="⏸";openMap();}
 function setTrack(name){if(bgmTrack===name)return;bgmTrack=name;bgmStep=0;if(bgmTimer)bgmStart();}
 function toggleMusic(){bgmOn=!bgmOn;if(bgmOn)bgmStart();else bgmStop();const b=$("#musicBtn");if(b)b.textContent=bgmOn?"🎵":"🔇";
   if(!bgmOn)stopWorldMusic();
@@ -577,7 +594,8 @@ function playSong(i,startOv,durOv){const a=getWorldAudio();if(!a||!G.musicTracks
 function stopWorldMusic(){if(worldAudio){try{worldAudio.pause();}catch(e){}worldAudio._idx=-1;worldAudio._ov=undefined;worldAudio._durOv=undefined;}}
 
 /* ---- shared state ---- */
-let state="title", worldIdx=0, world=null, eng=null, flagsGot=0, gold=0, t=0;
+let state="title", worldIdx=0, world=null, eng=null, flagsGot=0, gold=0, t=0, paused=false;
+const LOWFPS=(typeof matchMedia!=="undefined")&&matchMedia("(pointer:coarse)").matches;  // touch/mobile: render at ~30fps
 const cleared=new Array(G.worlds.length).fill(false);
 const P={hp:3,maxHp:3,inv:0};                         // shared player meta (hp/invuln)
 const key={l:false,r:false,a:false,b:false,block:false,up:false,_aEdge:false,_upEdge:false};
@@ -622,6 +640,7 @@ function pressContinue(){
   }
 }
 addEventListener("keydown",e=>{ if((e.key==="Enter"||e.code==="NumpadEnter") && state!=="play"){ e.preventDefault(); pressContinue(); } });
+addEventListener("keydown",e=>{const k=(e.key||"").toLowerCase();if((k==="p"||k==="escape")&&(state==="play")){e.preventDefault();togglePause();}});
 function hold(el,p){const on=e=>{e.preventDefault();if(p==="a"&&!key.a)key._aEdge=true;if(p==="up"&&!key.up)key._upEdge=true;key[p]=true;},
   off=e=>{e.preventDefault();key[p]=false;};
   el.addEventListener("touchstart",on,{passive:false});el.addEventListener("touchend",off);
@@ -659,7 +678,8 @@ function confettiBurst(){const cols=["#ffcf3f","#ff6b9d","#28d8c4","#3fd0e6","#b
   if(conf.length>360)conf.splice(0,conf.length-360);startFx();}
 function bigParty(){for(let k=0;k<3;k++)setTimeout(burst,k*420);confettiBurst();}
 function startFx(){if(!fxOn){fxOn=true;requestAnimationFrame(fxLoop);}}
-function fxLoop(){fxx.clearRect(0,0,W,H);
+function fxLoop(){if(LOWFPS&&(t&1)){requestAnimationFrame(fxLoop);return;}   // ~30fps on mobile
+  fxx.clearRect(0,0,W,H);
   for(const p of parts){p.vy+=.06;p.x+=p.vx;p.y+=p.vy;p.l-=.012;
     if(p.l>0){fxx.globalAlpha=Math.max(0,p.l);fxx.fillStyle=`hsl(${p.hue},90%,65%)`;fxx.fillRect(p.x,p.y,3,3);}}
   parts=parts.filter(p=>p.l>0);
@@ -824,6 +844,7 @@ addEventListener("pointerdown",unlockWorldAudio);
 addEventListener("touchstart",unlockWorldAudio);
 $("#quit").onclick=()=>openMap();
 function openMap(){
+  paused=false;$("#pauseScreen").classList.remove("show");
   state="map";$("#hud").style.display="none";$("#touch").classList.remove("on");stopWorldMusic();stopBirthdayMusic();setTrack("theme");if(bgmOn&&!bgmTimer)bgmStart();
   const list=$("#worldList");list.innerHTML="";
   G.worlds.forEach((wd,i)=>{const un=G.unlockAll||i===0||cleared[i-1];
@@ -840,6 +861,7 @@ function openMap(){
   show("map");
 }
 function startLevel(i){
+  paused=false;$("#pauseScreen").classList.remove("show");const _pb=$("#pauseBtn");if(_pb)_pb.textContent="⏸";
   worldIdx=i;world=G.worlds[i];flagsGot=0;gold=0;
   const bossW=world.genre==="fight"&&world.diff>=5;P.maxHp=bossW?5:3;P.hp=P.maxHp;P.inv=0;
   setTrack(({platform:"home",race:"race",shoot:"shoot",dungeon:"dungeon",fight:"boss"})[world.genre]||"theme");
@@ -1064,9 +1086,9 @@ ENGINES.dungeon=(function(){
      x.stroke();}
     // Solana NFT gallery — ONE fixed portrait per collection, spread along the wall (no repeating)
     if(th==="crypto"){const par=.7,fr=58*s,r=fr/2,cy=horizon-160*s;
-      const order=["cets","madlads","degods","smb","trippin","clayno"];
-      const names={cets:"CETS",madlads:"MAD LADS",degods:"DEGODS",smb:"SMB",trippin:"TRIPPIN' APE",clayno:"CLAYNOSAURZ"};
-      const bgc={cets:"#0e2a33",madlads:"#e9d6b8",degods:"#2a1840",smb:"#3a2a55",trippin:"#1a0e2a",clayno:"#ffe0a0"};
+      const order=["cets","okay","degods","smb","trippin","clayno"];
+      const names={cets:"CETS",okay:"OKAY BEARS",degods:"DEGODS",smb:"SMB",trippin:"TRIPPIN' APE",clayno:"CLAYNOSAURZ"};
+      const bgc={cets:"#0e2a33",okay:"#7fd4c4",degods:"#2a1840",smb:"#3a2a55",trippin:"#1a0e2a",clayno:"#ffe0a0"};
       const set1={okay:1,cets:1,degods:1,smb:1};
       for(let i=0;i<order.length;i++){const wx=(i+0.5)/order.length*len*par,cx=wx-cam*par,kind=order[i];
         if(cx<-r-30||cx>W+r+30)continue;
@@ -2295,11 +2317,16 @@ function startBirthdayMusic(){stopBirthdayMusic();if(muted)return;duckBday(1);bi
 function stopBirthdayMusic(){if(bdayLoop){clearInterval(bdayLoop);bdayLoop=null;}for(const o of bdayOsc){try{o.stop();}catch(e){}}bdayOsc=[];}
 
 /* ===================== MAIN LOOP ===================== */
-function frame(){t++;x.clearRect(0,0,W,H);
+// On touch/mobile devices, draw at ~30fps (update still runs every frame so gameplay speed is unchanged).
+// This roughly halves GPU work — the main cause of mobile lag.
+function frame(){t++;
+  const drawNow=!LOWFPS||(t&1)===0;
   if(eng&&(state==="play"||state==="flag"||state==="clear"||state==="defeat")){
-    eng.draw();if(state==="play")eng.update();
-  }else{ bg(["#08142e","#102a52"]); }
+    if(state==="play"&&!paused)eng.update();                 // gameplay at full rate
+    if(drawNow){x.clearRect(0,0,W,H);eng.draw();}            // visuals throttled on mobile
+  }else if(drawNow){ x.clearRect(0,0,W,H); bg(["#08142e","#102a52"]); }
   const ab=$("#abilities");if(state==="play"){ab.style.display="flex";updateAbilities();}else ab.style.display="none";
+  const pb=$("#pauseBtn");if(pb)pb.style.display=(state==="play")?"block":"none";
   requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>
