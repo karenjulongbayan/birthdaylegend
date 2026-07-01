@@ -673,11 +673,12 @@ addEventListener("pointercancel",()=>{ptr.down=false;});
 let parts=[],conf=[],fxOn=false;
 function spark(px,py,hue,n){n=reduce?Math.min(n,8):n;for(let i=0;i<n;i++){const a=rnd(0,6.28),sp=rnd(1,4);
   parts.push({x:px,y:py,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1,hue});}startFx();}
-function burst(){spark(rnd(W*.2,W*.8),rnd(H*.15,H*.5),rnd(0,360),30);beep(660,.05,"triangle");}
-function confettiBurst(){const cols=["#ffcf3f","#ff6b9d","#28d8c4","#3fd0e6","#b98cff","#fff"];const n=reduce?40:110;
+function burst(){if(state==="play")return;spark(rnd(W*.2,W*.8),rnd(H*.15,H*.5),rnd(0,360),30);beep(660,.05,"triangle");}
+function confettiBurst(){if(state==="play"){return;}const cols=["#ffcf3f","#ff6b9d","#28d8c4","#3fd0e6","#b98cff","#fff"];const n=reduce?40:110;
   for(let i=0;i<n;i++)conf.push({x:rnd(0,W),y:rnd(-H,0),vy:rnd(1,3.4),vx:rnd(-.7,.7),s:rnd(4,9),rot:rnd(0,6),vr:rnd(-.15,.15),c:cols[i%cols.length]});
   if(conf.length>360)conf.splice(0,conf.length-360);startFx();}
-function bigParty(){for(let k=0;k<3;k++)setTimeout(burst,k*420);confettiBurst();}
+function bigParty(){if(state==="play")return;for(let k=0;k<3;k++)setTimeout(burst,k*420);confettiBurst();}
+function clearFx(){parts=[];conf=[];fxOn=false;if(fxx)fxx.clearRect(0,0,W,H);}
 function startFx(){if(!fxOn){fxOn=true;requestAnimationFrame(fxLoop);}}
 function fxLoop(){if(LOWFPS&&(t&1)){requestAnimationFrame(fxLoop);return;}   // ~30fps on mobile
   fxx.clearRect(0,0,W,H);
@@ -845,7 +846,7 @@ addEventListener("pointerdown",unlockWorldAudio);
 addEventListener("touchstart",unlockWorldAudio);
 $("#quit").onclick=()=>openMap();
 function openMap(){
-  paused=false;$("#pauseScreen").classList.remove("show");
+  paused=false;$("#pauseScreen").classList.remove("show");clearFx();
   state="map";$("#hud").style.display="none";$("#touch").classList.remove("on");stopWorldMusic();stopBirthdayMusic();setTrack("theme");if(bgmOn&&!bgmTimer)bgmStart();
   const list=$("#worldList");list.innerHTML="";
   G.worlds.forEach((wd,i)=>{const un=G.unlockAll||i===0||cleared[i-1];
@@ -862,7 +863,7 @@ function openMap(){
   show("map");
 }
 function startLevel(i){
-  paused=false;$("#pauseScreen").classList.remove("show");const _pb=$("#pauseBtn");if(_pb)_pb.textContent="⏸";
+  paused=false;$("#pauseScreen").classList.remove("show");clearFx();const _pb=$("#pauseBtn");if(_pb)_pb.textContent="⏸";
   worldIdx=i;world=G.worlds[i];flagsGot=0;gold=0;
   const bossW=world.genre==="fight"&&world.diff>=5;P.maxHp=bossW?5:3;P.hp=P.maxHp;P.inv=0;
   setTrack(({platform:"home",race:"race",shoot:"shoot",dungeon:"dungeon",fight:"boss"})[world.genre]||"theme");
