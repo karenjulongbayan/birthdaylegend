@@ -89,7 +89,7 @@ window.GAME = {
     reward:{icon:"🎁",name:"The Real Surprise",rarity:"Mythic",note:"Come find me — your real gift is waiting. 💛"},
     letter:"My love,\n\nHappy 30th birthday! You beat every world — but you've already won my heart a thousand times over. Thank you for every laugh, every late-night talk, every bouquet of flowers, every tender love and care, every patience to my kaartehan and crazyness, and every little way you make ordinary days feel special.\n\nHere's to many more levels together. 🎂",
     finalTitle:"Happy Birthday!",
-    finalMessage:"Thanks for being awesome — and for being mine. Five worlds and 30 levels couldn't hold all the reasons I love you. You are a birthday gaming legend. GGs forever, my baby. 💛",
+    finalMessage:"Thanks for being awesome — and for being mine. Five worlds and 30 levels couldn't hold all the reasons I love you. You are a birthday gaming legend. You are the best. GGs forever, my baby. 💛",
     signoff:"— forever your Player 2",
   },
   // ===== PHOTOS shown after clearing each world (rot = degrees to rotate, if a photo is sideways) =====
@@ -99,9 +99,9 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/familyinnewyear.jpg",rot:180},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withcompletefam.jpg"} ],
     // World 2 — Racing the Boys (friends)
-    [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriendsbeach.jpg"},
-      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendsinlaunion.jpg",rot:-90},
-      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendshangout.JPG"} ],
+    [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendsinlaunion.jpg",rot:-90},
+      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withfriendshangout.JPG"},
+      {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriendsbeach.jpg"} ],
     // World 3 — Music Universe
     [ {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejwithfriends1975.jpg",rot:90},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/withblinkshirtconcert.jpg"},
@@ -122,7 +122,7 @@ window.GAME = {
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_8345%204.jpg"},
       {u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/IMG_9471%204.jpg"} ],
   ],
-  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:90},
+  finalPhoto:{u:"https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/ejinlaunion.jpg",rot:180},
   // Song played over the very last photo (after fireworks). track = index into musicTracks; start = seconds (any good part); dur 0 = play through.
   finalSong:{track:1, start:0, dur:0},
   // ===== Music Universe songs (one per wave). start = seconds where the CHORUS begins; dur = seconds to play before looping back. Tweak start to land exactly on each chorus. =====
@@ -503,10 +503,10 @@ const aabb=(ax,ay,aw,ah,bx,by,bw,bh)=>ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;
 
 /* ---- canvas ---- */
 const c=$("#c"),x=c.getContext("2d"),fx=$("#fx"),fxx=fx.getContext("2d");
-let W,H,DPR=1;
-function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
+let W,H,DPR=1,_bgCache={};
+function resize(){DPR=Math.min(devicePixelRatio||1,1.5);W=innerWidth;H=innerHeight;
   c.width=W*DPR;c.height=H*DPR;x.setTransform(DPR,0,0,DPR,0,0);
-  fx.width=W*DPR;fx.height=H*DPR;fxx.setTransform(DPR,0,0,DPR,0,0);}
+  fx.width=W*DPR;fx.height=H*DPR;fxx.setTransform(DPR,0,0,DPR,0,0);_bgCache={};}
 addEventListener("resize",resize);resize();
 function S(){return clamp(H/640,.6,1.2);}            // global scale factor
 
@@ -871,7 +871,8 @@ function showProfile(i){state="intro";$("#hud").style.display="none";
 const ENGINES={};
 
 /* ---------- shared draw bits ---------- */
-function bg(stops){const g=x.createLinearGradient(0,0,0,H);stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));
+function bg(stops){const key=stops.join("|");let g=_bgCache[key];
+  if(!g){g=x.createLinearGradient(0,0,0,H);stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));_bgCache[key]=g;}
   x.fillStyle=g;x.fillRect(0,0,W,H);}
 /* ---- EJ face (player head swap) ---- */
 let ejFaceOk=false;const EJFACE=(typeof Image!=="undefined")?new Image():null;
@@ -1061,19 +1062,21 @@ ENGINES.dungeon=(function(){
        const rowOff=((r%2)?bw/2:0)-off;
        for(let i=-1;i*bw+rowOff<W+bw;i++){const xx=i*bw+rowOff;x.moveTo(xx,yy);x.lineTo(xx,yy+bh);}}
      x.stroke();}
-    // Solana NFT gallery — framed portraits hung on the wall (crypto dungeon)
-    if(th==="crypto"){const par=.7,sp=520,off=((cam*par)%sp+sp)%sp,fr=58*s,r=fr/2;
-      const kinds=["okay","cets","degods","smb","madlads","clayno","trippin"],
-            names=["OKAY BEARS","CETS","DEGODS","SMB","MAD LADS","CLAYNOSAURZ","TRIPPIN' APE"],
-            bgc={okay:"#7fd4c4",cets:"#0e2a33",degods:"#2a1840",smb:"#3a2a55",madlads:"#e9d6b8",clayno:"#ffe0a0",trippin:"#1a0e2a"};
-      for(let i=-1;i*sp-off<W+sp;i++){const cx=i*sp-off+250,cy=horizon-160*s,k=((i%7)+7)%7,kind=kinds[k];
+    // Solana NFT gallery — ONE fixed portrait per collection, spread along the wall (no repeating)
+    if(th==="crypto"){const par=.7,fr=58*s,r=fr/2,cy=horizon-160*s;
+      const order=["cets","madlads","degods","smb","trippin","clayno"];
+      const names={cets:"CETS",madlads:"MAD LADS",degods:"DEGODS",smb:"SMB",trippin:"TRIPPIN' APE",clayno:"CLAYNOSAURZ"};
+      const bgc={cets:"#0e2a33",madlads:"#e9d6b8",degods:"#2a1840",smb:"#3a2a55",trippin:"#1a0e2a",clayno:"#ffe0a0"};
+      const set1={okay:1,cets:1,degods:1,smb:1};
+      for(let i=0;i<order.length;i++){const wx=(i+0.5)/order.length*len*par,cx=wx-cam*par,kind=order[i];
+        if(cx<-r-30||cx>W+r+30)continue;
         x.fillStyle="rgba(0,0,0,.4)";x.fillRect(cx-r-7*s,cy-r-7*s,fr+14*s,fr+34*s);     // shadow/backing
         x.fillStyle="#1d140f";x.fillRect(cx-r-6*s,cy+r+2*s,fr+12*s,17*s);                 // plaque base
         x.fillStyle="#b88a2e";x.fillRect(cx-r-5*s,cy-r-5*s,fr+10*s,fr+10*s);              // gold frame
         x.fillStyle="#e9c455";x.fillRect(cx-r-5*s,cy-r-5*s,fr+10*s,3*s);
         x.fillStyle=bgc[kind];x.fillRect(cx-r,cy-r,fr,fr);                                // matte
-        if(k<4)nftCreature(cx,cy,fr,kind);else nftCreature2(cx,cy,fr,kind);
-        x.fillStyle="#ffcf3f";x.font=`${Math.round(5.5*s)}px "Press Start 2P"`;x.textAlign="center";x.fillText(names[k],cx,cy+r+13*s);}}
+        if(set1[kind])nftCreature(cx,cy,fr,kind);else nftCreature2(cx,cy,fr,kind);
+        x.fillStyle="#ffcf3f";x.font=`${Math.round(5.5*s)}px "Press Start 2P"`;x.textAlign="center";x.fillText(names[kind],cx,cy+r+13*s);}}
     // wall torches (flicker)
     {const par=.7,sp=460,off=((cam*par)%sp+sp)%sp;
      for(let i=-1;i*sp-off<W+sp;i++){const tx=i*sp-off+60,ty=horizon-150*s,fl=Math.sin(t*.4+i)*3;
