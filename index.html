@@ -515,6 +515,7 @@ const aabb=(ax,ay,aw,ah,bx,by,bw,bh)=>ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;
 
 /* ---- canvas ---- */
 const c=$("#c"),x=c.getContext("2d"),fx=$("#fx"),fxx=fx.getContext("2d");
+fx.style.display="none";   // fx canvas only composites while particles are active (iOS: avoids a 2nd full-screen layer every frame)
 let W,H,DPR=1,_bgCache={};
 const LOWFPS = (typeof matchMedia!=="undefined" && (matchMedia("(pointer:coarse)").matches || matchMedia("(hover:none)").matches))
   || (typeof navigator!=="undefined" && /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent||""))
@@ -678,8 +679,8 @@ function confettiBurst(){if(state==="play"){return;}const cols=["#ffcf3f","#ff6b
   for(let i=0;i<n;i++)conf.push({x:rnd(0,W),y:rnd(-H,0),vy:rnd(1,3.4),vx:rnd(-.7,.7),s:rnd(4,9),rot:rnd(0,6),vr:rnd(-.15,.15),c:cols[i%cols.length]});
   if(conf.length>360)conf.splice(0,conf.length-360);startFx();}
 function bigParty(){if(state==="play")return;for(let k=0;k<3;k++)setTimeout(burst,k*420);confettiBurst();}
-function clearFx(){parts=[];conf=[];fxOn=false;if(fxx)fxx.clearRect(0,0,W,H);}
-function startFx(){if(!fxOn){fxOn=true;requestAnimationFrame(fxLoop);}}
+function clearFx(){parts=[];conf=[];fxOn=false;if(fxx)fxx.clearRect(0,0,W,H);if(fx)fx.style.display="none";}
+function startFx(){if(!fxOn){fxOn=true;if(fx)fx.style.display="block";requestAnimationFrame(fxLoop);}}
 function fxLoop(){if(LOWFPS&&(t&1)){requestAnimationFrame(fxLoop);return;}   // ~30fps on mobile
   fxx.clearRect(0,0,W,H);
   for(const p of parts){p.vy+=.06;p.x+=p.vx;p.y+=p.vy;p.l-=.012;
@@ -691,7 +692,7 @@ function fxLoop(){if(LOWFPS&&(t&1)){requestAnimationFrame(fxLoop);return;}   // 
   fxx.globalAlpha=1;
   if(state==="play"||state==="map"||state==="title")conf=[];
   else conf=conf.filter(cc=>cc.y<H+30);                       // confetti falls once, then is removed (no infinite pile-up)
-  if(parts.length===0&&conf.length===0){fxOn=false;return;}   // stop the loop when there's nothing to animate
+  if(parts.length===0&&conf.length===0){fxOn=false;if(fx)fx.style.display="none";return;}   // stop the loop + drop the layer when idle
   requestAnimationFrame(fxLoop);}
 
 /* ---- callouts / tips ---- */
@@ -899,16 +900,22 @@ function bg(stops){const key=stops.join("|");let g=_bgCache[key];
   if(!g){g=x.createLinearGradient(0,0,0,H);stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));_bgCache[key]=g;}
   x.fillStyle=g;x.fillRect(0,0,W,H);}
 /* ---- EJ face (player head swap) ---- */
-let ejFaceOk=false;const EJFACE=(typeof Image!=="undefined")?new Image():null;
-if(EJFACE){EJFACE.onload=()=>{ejFaceOk=true;};EJFACE.onerror=()=>{ejFaceOk=false;};
+let ejFaceOk=false,faceCanvas=null;const EJFACE=(typeof Image!=="undefined")?new Image():null;
+if(EJFACE){EJFACE.onload=()=>{ejFaceOk=true;buildFaceCanvas();};EJFACE.onerror=()=>{ejFaceOk=false;};
   EJFACE.src="https://gcsaabtxbevuhgiblgbo.supabase.co/storage/v1/object/public/bday/cuteejchildhood.jpg";}
-function faceImg(cx,cy,r){if(!ejFaceOk||!EJFACE)return;
-  const iw=EJFACE.naturalWidth||1,ih=EJFACE.naturalHeight||1;
-  const fc=G.faceCrop||{zoom:0.62,cx:0.5,cy:0.32};
+// Render the cropped circular face ONCE into a small canvas. Per-frame we just stamp this
+// tiny canvas — no clip(), no sampling from the big photo — which is what iOS Safari chokes on.
+function buildFaceCanvas(){try{
+  const S=200,fcv=document.createElement("canvas");fcv.width=S;fcv.height=S;const f2=fcv.getContext("2d");
+  const iw=EJFACE.naturalWidth||1,ih=EJFACE.naturalHeight||1,fc=G.faceCrop||{zoom:0.62,cx:0.5,cy:0.32};
   const side=Math.min(iw,ih)*(fc.zoom||0.62);
-  let ox=iw*(fc.cx!=null?fc.cx:0.5)-side/2, oy=ih*(fc.cy!=null?fc.cy:0.32)-side/2;
+  let ox=iw*(fc.cx!=null?fc.cx:0.5)-side/2,oy=ih*(fc.cy!=null?fc.cy:0.32)-side/2;
   ox=Math.max(0,Math.min(ox,iw-side));oy=Math.max(0,Math.min(oy,ih-side));
-  x.save();x.beginPath();x.arc(cx,cy,r,0,7);x.closePath();x.clip();x.drawImage(EJFACE,ox,oy,side,side,cx-r,cy-r,r*2,r*2);x.restore();
+  f2.save();f2.beginPath();f2.arc(S/2,S/2,S/2,0,7);f2.closePath();f2.clip();
+  f2.drawImage(EJFACE,ox,oy,side,side,0,0,S,S);f2.restore();faceCanvas=fcv;
+}catch(e){faceCanvas=null;}}
+function faceImg(cx,cy,r){if(!ejFaceOk)return;
+  if(faceCanvas)x.drawImage(faceCanvas,cx-r,cy-r,r*2,r*2);
   x.lineWidth=Math.max(1,r*.14);x.strokeStyle="rgba(20,10,30,.4)";x.beginPath();x.arc(cx,cy,r,0,7);x.stroke();}
 /* stylized Solana-NFT-style portraits for the dungeon gallery wall (original art, IP-safe) */
 function nftCreature(cx,cy,fr,kind){x.save();
